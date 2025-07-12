@@ -4,7 +4,7 @@ import com.securebank.dto.AuthResponse;
 import com.securebank.exception.BankException;
 import com.securebank.model.User;
 import com.securebank.repository.UserRepository;
-import com.securebank.security.JwtTokenProvider;
+import com.securebank.config.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

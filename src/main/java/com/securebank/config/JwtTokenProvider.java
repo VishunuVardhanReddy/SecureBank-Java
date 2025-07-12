@@ -1,58 +1,59 @@
-package com.securebank.security;
+package com.securebank.config;
 
 import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
+import java.security.Key;
 import java.util.Date;
 
 @Component
 public class JwtTokenProvider {
     
-    @Value("${app.jwtSecret}")
+    @Value("${jwt.secret}")
     private String jwtSecret;
     
-    @Value("${app.jwtExpirationInMs}")
-    private int jwtExpirationInMs;
+    @Value("${jwt.expiration}")
+    private long jwtExpiration;
+    
+    private Key getSigningKey() {
+        byte[] keyBytes = jwtSecret.getBytes();
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
     
     public String generateToken(Authentication authentication) {
         String username = authentication.getName();
-        Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + jwtExpirationInMs);
+        Date currentDate = new Date();
+        Date expireDate = new Date(currentDate.getTime() + jwtExpiration);
         
         return Jwts.builder()
                 .setSubject(username)
-                .setIssuedAt(new Date())
-                .setExpiration(expiryDate)
-                .signWith(SignatureAlgorithm.HS512, jwtSecret)
+                .setIssuedAt(currentDate)
+                .setExpiration(expireDate)
+                .signWith(getSigningKey())
                 .compact();
     }
     
-    public String getUsernameFromJWT(String token) {
-        Claims claims = Jwts.parser()
-                .setSigningKey(jwtSecret)
+    public String getUsernameFromToken(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
                 .parseClaimsJws(token)
-                .getBody();
-        
-        return claims.getSubject();
+                .getBody()
+                .getSubject();
     }
     
-    public boolean validateToken(String authToken) {
+    public boolean validateToken(String token) {
         try {
-            Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(authToken);
+            Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token);
             return true;
-        } catch (SignatureException ex) {
-            // Invalid JWT signature
-        } catch (MalformedJwtException ex) {
-            // Invalid JWT token
-        } catch (ExpiredJwtException ex) {
-            // Expired JWT token
-        } catch (UnsupportedJwtException ex) {
-            // Unsupported JWT token
-        } catch (IllegalArgumentException ex) {
-            // JWT claims string is empty
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
         }
-        return false;
     }
 }
